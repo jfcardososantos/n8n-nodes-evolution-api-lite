@@ -128,6 +128,20 @@ export class EvolutionApi implements INodeType {
 				],
 				default: 'verifyNumber',
 			},
+			// Instance field
+			{
+				displayName: 'Instance Name',
+				name: 'instanceName',
+				type: 'string',
+				default: '',
+				description: 'Name of the instance that will send the message',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['message', 'chat'],
+					},
+				},
+			},
 			// Common fields
 			{
 				displayName: 'Number',
@@ -372,11 +386,12 @@ export class EvolutionApi implements INodeType {
 				let method = 'POST';
 				let body: IDataObject = {};
 				const number = this.getNodeParameter('number', i) as string;
+				const instanceName = this.getNodeParameter('instanceName', i) as string;
 
 				if (resource === 'message') {
 					switch (operation) {
 						case 'sendText':
-							endpoint = `/message/sendText/${credentials.instanceName}`;
+							endpoint = `/message/sendText/${instanceName}`;
 							body = {
 								number,
 								text: this.getNodeParameter('text', i) as string,
@@ -384,7 +399,7 @@ export class EvolutionApi implements INodeType {
 							break;
 
 						case 'sendImage':
-							endpoint = `/message/sendImage/${credentials.instanceName}`;
+							endpoint = `/message/sendImage/${instanceName}`;
 							body = {
 								number,
 								image: this.getNodeParameter('mediaUrl', i) as string,
@@ -393,7 +408,7 @@ export class EvolutionApi implements INodeType {
 							break;
 
 						case 'sendVideo':
-							endpoint = `/message/sendVideo/${credentials.instanceName}`;
+							endpoint = `/message/sendVideo/${instanceName}`;
 							body = {
 								number,
 								video: this.getNodeParameter('mediaUrl', i) as string,
@@ -402,7 +417,7 @@ export class EvolutionApi implements INodeType {
 							break;
 
 						case 'sendAudio':
-							endpoint = `/message/sendAudio/${credentials.instanceName}`;
+							endpoint = `/message/sendAudio/${instanceName}`;
 							body = {
 								number,
 								audio: this.getNodeParameter('mediaUrl', i) as string,
@@ -410,7 +425,7 @@ export class EvolutionApi implements INodeType {
 							break;
 
 						case 'sendDocument':
-							endpoint = `/message/sendDocument/${credentials.instanceName}`;
+							endpoint = `/message/sendDocument/${instanceName}`;
 							body = {
 								number,
 								document: this.getNodeParameter('mediaUrl', i) as string,
@@ -419,7 +434,7 @@ export class EvolutionApi implements INodeType {
 							break;
 
 						case 'sendContact':
-							endpoint = `/message/sendContact/${credentials.instanceName}`;
+							endpoint = `/message/sendContact/${instanceName}`;
 							body = {
 								number,
 								contacts: [
@@ -432,7 +447,7 @@ export class EvolutionApi implements INodeType {
 							break;
 
 						case 'sendList':
-							endpoint = `/message/sendList/${credentials.instanceName}`;
+							endpoint = `/message/sendList/${instanceName}`;
 							const listItems = this.getNodeParameter('listItems', i) as IDataObject;
 							const items = (listItems.items as IDataObject[]) || [];
 							
@@ -448,6 +463,7 @@ export class EvolutionApi implements INodeType {
 											id: item.title as string,
 											title: item.title as string,
 											description: item.description as string,
+											rowId: `${item.title}_${Date.now()}`
 										})),
 									},
 								],
@@ -455,7 +471,7 @@ export class EvolutionApi implements INodeType {
 							break;
 
 						case 'sendButton':
-							endpoint = `/message/sendButton/${credentials.instanceName}`;
+							endpoint = `/message/sendButton/${instanceName}`;
 							const buttons = this.getNodeParameter('buttons', i) as IDataObject;
 							const buttonItems = (buttons.buttonItems as IDataObject[]) || [];
 							
@@ -473,7 +489,7 @@ export class EvolutionApi implements INodeType {
 				} else if (resource === 'chat') {
 					switch (operation) {
 						case 'verifyNumber':
-							endpoint = `/chat/findNumber/${credentials.instanceName}`;
+							endpoint = `/chat/findNumber/${instanceName}`;
 							method = 'GET';
 							body = {
 								number,
@@ -482,9 +498,15 @@ export class EvolutionApi implements INodeType {
 					}
 				}
 
+				// Ensure the URL is properly formatted
+				const baseUrl = credentials.apiUrl as string;
+				const fullUrl = baseUrl.endsWith('/') 
+					? `${baseUrl.slice(0, -1)}${endpoint}`
+					: `${baseUrl}${endpoint}`;
+
 				const response = await axios({
 					method,
-					url: `${credentials.apiUrl}${endpoint}`,
+					url: fullUrl,
 					headers: {
 						'Content-Type': 'application/json',
 						apikey: credentials.apiKey as string,
