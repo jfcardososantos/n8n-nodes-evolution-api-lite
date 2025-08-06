@@ -1,0 +1,21 @@
+{
+  "github": {
+    "release": true,
+    "releaseName": "Release ${version}",
+    "releaseNotes": "echo '## What\\'s Changed\\n\\nThis release includes:\\n- Bug fixes and improvements\\n- Updated dependencies\\n\\n## Installation\\n\\n```bash\\nnpm install n8n-nodes-evolution-api-lite@${version}\\n```\\n\\n## Documentation\\n\\nSee [README.md](https://github.com/jfcardososantos/n8n-nodes-evolution-api-lite) for detailed documentation.'"
+  },
+  "npm": {
+    "publish": true
+  },
+  "git": {
+    "commitMessage": "chore: release ${version}",
+    "tagName": "v${version}",
+    "push": true
+  },
+  "plugins": {
+    "@release-it/conventional-changelog": {
+      "preset": "angular",
+      "infile": "CHANGELOG.md"
+    }
+  }
+} 
