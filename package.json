@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-evolution-api-lite",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "N8N Community Node for Evolution API - Lite Version",
   "keywords": [
     "n8n-community-node-package"

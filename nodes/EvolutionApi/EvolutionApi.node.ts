@@ -123,7 +123,7 @@ export class EvolutionApi implements INodeType {
 						name: 'Verify Number',
 						value: 'verifyNumber',
 						description: 'Verify if a number exists on WhatsApp',
-						action: 'Verify if a number exists on WhatsApp',
+						action: 'Verify if a number exists on whats app',
 					},
 				],
 				default: 'verifyNumber',
