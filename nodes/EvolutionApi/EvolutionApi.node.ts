@@ -232,8 +232,8 @@ export class EvolutionApi implements INodeType {
 			},
 			// List fields
 			{
-				displayName: 'List Title',
-				name: 'listTitle',
+				displayName: 'Title',
+				name: 'title',
 				type: 'string',
 				default: '',
 				description: 'Title of the list',
@@ -246,11 +246,12 @@ export class EvolutionApi implements INodeType {
 				},
 			},
 			{
-				displayName: 'List Description',
-				name: 'listDescription',
+				displayName: 'Description',
+				name: 'description',
 				type: 'string',
 				default: '',
 				description: 'Description of the list',
+				required: true,
 				displayOptions: {
 					show: {
 						resource: ['message'],
@@ -259,13 +260,11 @@ export class EvolutionApi implements INodeType {
 				},
 			},
 			{
-				displayName: 'List Items',
-				name: 'listItems',
-				type: 'fixedCollection',
-				typeOptions: {
-					multipleValues: true,
-				},
-				description: 'Items in the list',
+				displayName: 'Button Text',
+				name: 'buttonText',
+				type: 'string',
+				default: 'Ver Opções',
+				description: 'Text that will appear on the list button',
 				required: true,
 				displayOptions: {
 					show: {
@@ -273,29 +272,89 @@ export class EvolutionApi implements INodeType {
 						operation: ['sendList'],
 					},
 				},
+			},
+			{
+				displayName: 'Footer Text',
+				name: 'footerText',
+				type: 'string',
+				default: '',
+				description: 'Text that will appear in the footer of the list',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['message'],
+						operation: ['sendList'],
+					},
+				},
+			},
+			{
+				displayName: 'Sections',
+				name: 'sections',
+				placeholder: 'Add Section',
+				type: 'fixedCollection',
+				typeOptions: {
+					multipleValues: true,
+				},
 				default: {},
 				options: [
 					{
-						name: 'items',
-						displayName: 'Items',
+						name: 'sectionValues',
+						displayName: 'Section',
 						values: [
 							{
-								displayName: 'Title',
+								displayName: 'Section Title',
 								name: 'title',
 								type: 'string',
 								default: '',
-								description: 'Title of the item',
+								description: 'Title of the section',
 							},
 							{
-								displayName: 'Description',
-								name: 'description',
-								type: 'string',
-								default: '',
-								description: 'Description of the item',
+								displayName: 'Rows',
+								name: 'rows',
+								type: 'fixedCollection',
+								typeOptions: {
+									multipleValues: true,
+								},
+								default: {},
+								options: [
+									{
+										name: 'rowValues',
+										displayName: 'Row',
+										values: [
+											{
+												displayName: 'Title',
+												name: 'title',
+												type: 'string',
+												default: '',
+												description: 'Row title',
+											},
+											{
+												displayName: 'Description',
+												name: 'description',
+												type: 'string',
+												default: '',
+												description: 'Row description',
+											},
+											{
+												displayName: 'Row ID',
+												name: 'rowId',
+												type: 'string',
+												default: '',
+												description: 'Unique identifier for the row',
+											},
+										],
+									},
+								],
 							},
 						],
 					},
 				],
+				displayOptions: {
+					show: {
+						resource: ['message'],
+						operation: ['sendList'],
+					},
+				},
 			},
 			// Button fields
 			{
@@ -448,25 +507,31 @@ export class EvolutionApi implements INodeType {
 
 						case 'sendList':
 							endpoint = `/message/sendList/${instanceName}`;
-							const listItems = this.getNodeParameter('listItems', i) as IDataObject;
-							const items = (listItems.items as IDataObject[]) || [];
-							
+							const sections = this.getNodeParameter('sections.sectionValues', i) as {
+								title: string;
+								rows: {
+									rowValues: {
+										title: string;
+										description?: string;
+										rowId?: string;
+									}[];
+								};
+							}[];
+
 							body = {
 								number,
-								title: this.getNodeParameter('listTitle', i) as string,
-								description: this.getNodeParameter('listDescription', i) as string,
-								buttonText: 'Selecionar',
-								sections: [
-									{
-										title: 'Opções',
-										rows: items.map((item: IDataObject) => ({
-											id: item.title as string,
-											title: item.title as string,
-											description: item.description as string,
-											rowId: `${item.title}_${Date.now()}`
-										})),
-									},
-								],
+								title: this.getNodeParameter('title', i) as string,
+								description: this.getNodeParameter('description', i) as string,
+								buttonText: this.getNodeParameter('buttonText', i) as string,
+								footerText: this.getNodeParameter('footerText', i) as string,
+								sections: sections.map(section => ({
+									title: section.title,
+									rows: section.rows.rowValues.map(row => ({
+										title: row.title,
+										description: row.description || '',
+										rowId: row.rowId || `${section.title}_${row.title}`
+									}))
+								}))
 							};
 							break;
 
@@ -474,14 +539,14 @@ export class EvolutionApi implements INodeType {
 							endpoint = `/message/sendButton/${instanceName}`;
 							const buttons = this.getNodeParameter('buttons', i) as IDataObject;
 							const buttonItems = (buttons.buttonItems as IDataObject[]) || [];
-							
+
 							body = {
 								number,
 								title: this.getNodeParameter('buttonTitle', i) as string,
 								text: this.getNodeParameter('buttonText', i) as string,
 								buttons: buttonItems.map((button: IDataObject) => ({
-									id: button.buttonId as string,
-									body: button.buttonText as string,
+									id: (button.buttonId as string) || `button_${Date.now()}`,
+									body: (button.buttonText as string) || 'Botão',
 								})),
 							};
 							break;
@@ -499,8 +564,11 @@ export class EvolutionApi implements INodeType {
 				}
 
 				// Ensure the URL is properly formatted
-				const baseUrl = credentials.apiUrl as string;
-				const fullUrl = baseUrl.endsWith('/') 
+				const baseUrl = credentials['server-url'] as string;
+				if (!baseUrl) {
+					throw new Error('Server URL is required. Please configure the credentials.');
+				}
+				const fullUrl = baseUrl.endsWith('/')
 					? `${baseUrl.slice(0, -1)}${endpoint}`
 					: `${baseUrl}${endpoint}`;
 
@@ -509,7 +577,7 @@ export class EvolutionApi implements INodeType {
 					url: fullUrl,
 					headers: {
 						'Content-Type': 'application/json',
-						apikey: credentials.apiKey as string,
+						apikey: credentials.apikey as string,
 					},
 					data: method === 'POST' ? body : undefined,
 					params: method === 'GET' ? body : undefined,
